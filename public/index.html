@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lexicon Ontology — 語彙の存在論</title>
+<meta property="og:title" content="Lexicon Ontology — 語彙の存在論">
+<meta property="og:description" content="What an artificial language thinks goes together. 460 compound words from 3000 generations of autonomous evolution, mapped as a concept network.">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+JP:wght@400;600&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --border: #1e1e2e;
+  --text: #c8c8d8;
+  --text-dim: #666680;
+  --text-bright: #e8e8f0;
+  --natural: #4ade80;
+  --quality: #f59e0b;
+  --action: #ef4444;
+  --relation: #a78bfa;
+  --abstract: #38bdf8;
+  --being: #ec4899;
+  --unknown: #6b7280;
+  --accent: #38bdf8;
+}
+
+html, body { 
+  height: 100%; 
+  background: var(--bg); 
+  color: var(--text); 
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
+
+#app {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+}
+
+header {
+  grid-column: 1 / -1;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+header h1 {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+
+header h1 span {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-left: 8px;
+  font-weight: 400;
+}
+
+.header-stats {
+  display: flex;
+  gap: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.header-stats .stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-stats .stat-val {
+  color: var(--accent);
+}
+
+#canvas-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+}
+
+canvas:active { cursor: grabbing; }
+
+#sidebar {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.section-title {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.legend-item:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.legend-item.active {
+  border-color: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Living vocabulary */
+.living-words {
+  margin-bottom: 20px;
+}
+
+.living-word {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.living-word:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.living-word .word-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+}
+
+.living-word .word-meaning {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.living-word .word-fitness {
+  width: 40px;
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.living-word .word-fitness-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+/* Detail panel */
+#detail-panel {
+  display: none;
+  margin-bottom: 20px;
+}
+
+#detail-panel.visible { display: block; }
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.detail-concept {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.detail-close {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(255,255,255,0.06);
+  color: var(--text-dim);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-close:hover { background: rgba(255,255,255,0.1); }
+
+.detail-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.detail-stat {
+  background: rgba(255,255,255,0.03);
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.detail-stat .label {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.detail-stat .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: var(--text-bright);
+}
+
+.detail-compounds {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.compound-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.compound-word {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent);
+}
+
+.compound-meaning {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+/* Tooltip */
+#tooltip {
+  position: fixed;
+  display: none;
+  background: #1a1a28;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 100;
+  max-width: 240px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+#tooltip .tt-name {
+  font-family: 'Noto Serif JP', serif;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+#tooltip .tt-cat {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+#tooltip .tt-stat {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+/* Bottom essay overlay */
+#essay-toggle {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  cursor: pointer;
+  z-index: 50;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+
+#essay-toggle:hover {
+  color: var(--text-bright);
+  border-color: rgba(255,255,255,0.2);
+}
+
+#essay-overlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 320px;
+  background: linear-gradient(transparent, var(--bg) 20px, var(--bg));
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease;
+  z-index: 40;
+  padding: 0 48px;
+}
+
+#essay-overlay.open {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+
+.essay-content {
+  max-width: 640px;
+  margin: 40px auto 0;
+}
+
+.essay-content h2 {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 16px;
+}
+
+.essay-content p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.essay-content p.dim {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.ctrl-btn {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s;
+}
+
+.ctrl-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+}
+
+.ctrl-btn.active {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: var(--accent);
+}
+
+/* Search */
+#search {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  outline: none;
+}
+
+#search:focus { border-color: var(--accent); }
+#search::placeholder { color: var(--text-dim); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>語彙の存在論 <span>Lexicon Ontology</span></h1>
+    <div class="header-stats">
+      <div class="stat">Gen <span class="stat-val" id="h-gen">—</span></div>
+      <div class="stat">Concepts <span class="stat-val" id="h-concepts">—</span></div>
+      <div class="stat">Compounds <span class="stat-val" id="h-compounds">—</span></div>
+      <div class="stat">Edges <span class="stat-val" id="h-edges">—</span></div>
+    </div>
+  </header>
+  
+  <div id="canvas-wrap">
+    <canvas id="graph"></canvas>
+  </div>
+  
+  <div id="sidebar">
+    <div class="section-title">Categories</div>
+    <div class="legend" id="legend"></div>
+    
+    <div class="controls">
+      <button class="ctrl-btn active" data-mode="all">All</button>
+      <button class="ctrl-btn" data-mode="living">Living Only</button>
+      <button class="ctrl-btn" data-mode="hub">Hubs (5+)</button>
+    </div>
+    
+    <div id="detail-panel">
+      <div class="detail-header">
+        <span class="detail-concept" id="detail-name">—</span>
+        <button class="detail-close" id="detail-close">×</button>
+      </div>
+      <div class="detail-stats" id="detail-stats"></div>
+      <div class="section-title" style="margin-top:8px">Compound Words</div>
+      <div class="detail-compounds" id="detail-compounds"></div>
+    </div>
+    
+    <div class="section-title">Living Vocabulary</div>
+    <input type="text" id="search" placeholder="Search concepts...">
+    <div class="living-words" id="living-words"></div>
+  </div>
+  
+  <div id="tooltip">
+    <div class="tt-name"></div>
+    <div class="tt-cat"></div>
+    <div class="tt-stat"></div>
+  </div>
+  
+  <button id="essay-toggle">What an artificial language thinks goes together ↑</button>
+  
+  <div id="essay-overlay">
+    <div class="essay-content">
+      <h2>What Goes Together 結びつくもの</h2>
+      <p>Over 3,000 generations, an artificial language evolving on a Raspberry Pi has formed 460 compound words. Each compound is two concepts fusing — a statement about what the language thinks belongs together.</p>
+      <p>This network maps those relationships. Each node is a concept. Each edge is a compound word that fused them. The thickness of the edge shows how many times the language independently decided those two concepts should merge.</p>
+      <p>The results are accidentally ontological. "Move" is the most connected concept — 22 compounds, 20 unique partners. Motion is how this language understands the world. After "move" come "slow," "fall," "flower," and "from" — a vocabulary preoccupied with the qualities of change.</p>
+      <p>The clusters that form are recognizable. Nature words connect to each other (ocean-stone, fire-seed, wind-tree). Quality words bridge between them (deep-fall, fast-wave, slow-stone). Relational words form the grammar — "from," "between," "through" — connecting everything to everything else.</p>
+      <p>No one designed this ontology. No one told the language that "flower" and "cycle" should be related, or that "threshold" and "pattern" form a natural pair. These connections emerged from 3,000 generations of fitness pressure, compound formation, and conceptual drift.</p>
+      <p class="dim">The network is a fossil record of thought — what an artificial mind thinks goes together, without knowing it thinks at all.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = {
+  natural: '#4ade80',
+  quality: '#f59e0b',
+  action: '#ef4444',
+  relation: '#a78bfa',
+  abstract: '#38bdf8',
+  being: '#ec4899',
+  unknown: '#6b7280',
+};
+
+let data = null;
+let nodes = [];
+let edges = [];
+let livingMeanings = new Set();
+
+// Physics
+let camera = { x: 0, y: 0, zoom: 1 };
+let dragging = false;
+let dragStart = { x: 0, y: 0 };
+let camStart = { x: 0, y: 0 };
+let hoveredNode = null;
+let selectedNode = null;
+let activeFilter = null;
+let filterMode = 'all';
+
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  const wrap = document.getElementById('canvas-wrap');
+  W = wrap.clientWidth;
+  H = wrap.clientHeight;
+  canvas.width = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+
+async function loadData() {
+  const res = await fetch('/api/data');
+  data = await res.json();
+  
+  // Set up header stats
+  document.getElementById('h-gen').textContent = data.generation;
+  document.getElementById('h-concepts').textContent = data.nodes.length;
+  document.getElementById('h-compounds').textContent = data.totalCompounds;
+  document.getElementById('h-edges').textContent = data.edges.length;
+  
+  // Living meanings
+  livingMeanings = new Set(data.living.map(w => w.meaning));
+  
+  // Create nodes with physics
+  nodes = data.nodes.map(n => ({
+    ...n,
+    x: (Math.random() - 0.5) * 600,
+    y: (Math.random() - 0.5) * 600,
+    vx: 0,
+    vy: 0,
+    radius: Math.max(4, Math.min(20, 3 + n.count * 0.8)),
+    isLiving: livingMeanings.has(n.id),
+  }));
+  
+  // Index nodes
+  const nodeMap = {};
+  nodes.forEach((n, i) => nodeMap[n.id] = i);
+  
+  // Create edges with node references
+  edges = data.edges.map(e => ({
+    ...e,
+    sourceIdx: nodeMap[e.source],
+    targetIdx: nodeMap[e.target],
+  })).filter(e => e.sourceIdx !== undefined && e.targetIdx !== undefined);
+  
+  // Build legend
+  buildLegend();
+  buildLivingWords();
+}
+
+function buildLegend() {
+  const legend = document.getElementById('legend');
+  const cats = {};
+  nodes.forEach(n => { cats[n.category] = (cats[n.category] || 0) + 1; });
+  
+  legend.innerHTML = '';
+  for (const [cat, count] of Object.entries(cats).sort((a,b) => b[1] - a[1])) {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<div class="legend-dot" style="background:${COLORS[cat] || COLORS.unknown}"></div>${cat} (${count})`;
+    item.addEventListener('click', () => {
+      if (activeFilter === cat) {
+        activeFilter = null;
+        item.classList.remove('active');
+      } else {
+        document.querySelectorAll('.legend-item').forEach(el => el.classList.remove('active'));
+        activeFilter = cat;
+        item.classList.add('active');
+      }
+    });
+    legend.appendChild(item);
+  }
+}
+
+function buildLivingWords() {
+  const container = document.getElementById('living-words');
+  container.innerHTML = '';
+  
+  data.living.forEach(w => {
+    const el = document.createElement('div');
+    el.className = 'living-word';
+    const color = COLORS[w.category] || COLORS.unknown;
+    el.innerHTML = `
+      <div>
+        <span class="word-name" style="color:${color}">${w.word}</span>
+        <span class="word-meaning">${w.meaning}</span>
+      </div>
+      <div class="word-fitness"><div class="word-fitness-bar" style="width:${w.fitness * 100}%;background:${color}"></div></div>
+    `;
+    el.addEventListener('click', () => {
+      // Find and select the concept node for this word's meaning
+      const node = nodes.find(n => n.id === w.meaning);
+      if (node) selectNode(node);
+    });
+    container.appendChild(el);
+  });
+}
+
+function selectNode(node) {
+  selectedNode = node;
+  const panel = document.getElementById('detail-panel');
+  panel.classList.add('visible');
+  
+  document.getElementById('detail-name').textContent = node.id;
+  document.getElementById('detail-name').style.color = COLORS[node.category] || COLORS.unknown;
+  
+  // Stats
+  const statsEl = document.getElementById('detail-stats');
+  const living = node.isLiving ? '✦ Living' : '✧ Extinct';
+  statsEl.innerHTML = `
+    <div class="detail-stat"><div class="label">Compounds</div><div class="value">${node.count}</div></div>
+    <div class="detail-stat"><div class="label">Partners</div><div class="value">${node.partners}</div></div>
+    <div class="detail-stat"><div class="label">Category</div><div class="value">${node.category}</div></div>
+    <div class="detail-stat"><div class="label">Status</div><div class="value">${living}</div></div>
+  `;
+  
+  // Find compounds involving this concept
+  const compoundsEl = document.getElementById('detail-compounds');
+  const relevantEdges = edges.filter(e => 
+    nodes[e.sourceIdx].id === node.id || nodes[e.targetIdx].id === node.id
+  );
+  
+  const allCompounds = [];
+  relevantEdges.forEach(e => {
+    e.compounds.forEach(c => {
+      const partner = nodes[e.sourceIdx].id === node.id ? nodes[e.targetIdx].id : nodes[e.sourceIdx].id;
+      allCompounds.push({ ...c, partner });
+    });
+  });
+  
+  allCompounds.sort((a, b) => a.born - b.born);
+  
+  compoundsEl.innerHTML = allCompounds.slice(0, 30).map(c => `
+    <div class="compound-item">
+      <div>
+        <span class="compound-word">${c.word}</span>
+        <span class="compound-meaning">${c.compound_meaning}</span>
+      </div>
+      <span style="color:var(--text-dim);font-size:10px">Gen ${c.born}</span>
+    </div>
+  `).join('');
+  
+  // Center camera on node
+  camera.x = -node.x;
+  camera.y = -node.y;
+}
+
+document.getElementById('detail-close').addEventListener('click', () => {
+  selectedNode = null;
+  document.getElementById('detail-panel').classList.remove('visible');
+});
+
+// Search
+document.getElementById('search').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll('.living-word').forEach(el => {
+    const text = el.textContent.toLowerCase();
+    el.style.display = text.includes(q) ? '' : 'none';
+  });
+  
+  if (q.length > 0) {
+    const match = nodes.find(n => n.id.toLowerCase().includes(q));
+    if (match) hoveredNode = match;
+  }
+});
+
+// Filter mode buttons
+document.querySelectorAll('.ctrl-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterMode = btn.dataset.mode;
+  });
+});
+
+// Physics simulation
+function simulate() {
+  const repulsion = 800;
+  const attraction = 0.003;
+  const damping = 0.92;
+  const centerPull = 0.001;
+  
+  // Node repulsion (Barnes-Hut approximation — simplified)
+  for (let i = 0; i < nodes.length; i++) {
+    const ni = nodes[i];
+    
+    // Center gravity
+    ni.vx -= ni.x * centerPull;
+    ni.vy -= ni.y * centerPull;
+    
+    for (let j = i + 1; j < nodes.length; j++) {
+      const nj = nodes[j];
+      let dx = ni.x - nj.x;
+      let dy = ni.y - nj.y;
+      let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      
+      if (dist > 500) continue; // Skip far nodes
+      
+      const force = repulsion / (dist * dist);
+      const fx = (dx / dist) * force;
+      const fy = (dy / dist) * force;
+      
+      ni.vx += fx;
+      ni.vy += fy;
+      nj.vx -= fx;
+      nj.vy -= fy;
+    }
+  }
+  
+  // Edge attraction
+  for (const edge of edges) {
+    const s = nodes[edge.sourceIdx];
+    const t = nodes[edge.targetIdx];
+    let dx = t.x - s.x;
+    let dy = t.y - s.y;
+    let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    
+    const idealDist = 80;
+    const force = (dist - idealDist) * attraction * edge.weight;
+    const fx = (dx / dist) * force;
+    const fy = (dy / dist) * force;
+    
+    s.vx += fx;
+    s.vy += fy;
+    t.vx -= fx;
+    t.vy -= fy;
+  }
+  
+  // Update positions
+  for (const n of nodes) {
+    n.vx *= damping;
+    n.vy *= damping;
+    n.x += n.vx;
+    n.y += n.vy;
+  }
+}
+
+function isNodeVisible(n) {
+  if (filterMode === 'living' && !n.isLiving) return false;
+  if (filterMode === 'hub' && n.count < 5) return false;
+  if (activeFilter && n.category !== activeFilter) return false;
+  return true;
+}
+
+function isEdgeVisible(e) {
+  return isNodeVisible(nodes[e.sourceIdx]) && isNodeVisible(nodes[e.targetIdx]);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  
+  ctx.save();
+  ctx.translate(W / 2 + camera.x * camera.zoom, H / 2 + camera.y * camera.zoom);
+  ctx.scale(camera.zoom, camera.zoom);
+  
+  // Draw edges
+  for (const edge of edges) {
+    if (!isEdgeVisible(edge)) continue;
+    
+    const s = nodes[edge.sourceIdx];
+    const t = nodes[edge.targetIdx];
+    
+    const isHighlighted = selectedNode && 
+      (s.id === selectedNode.id || t.id === selectedNode.id);
+    const isHoverHighlighted = hoveredNode && 
+      (s.id === hoveredNode.id || t.id === hoveredNode.id);
+    
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(t.x, t.y);
+    
+    if (isHighlighted || isHoverHighlighted) {
+      const color = COLORS[selectedNode ? selectedNode.category : hoveredNode.category] || COLORS.unknown;
+      ctx.strokeStyle = color + '60';
+      ctx.lineWidth = Math.max(1, edge.weight * 1.5);
+    } else if (selectedNode || hoveredNode) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+      ctx.lineWidth = 0.5;
+    } else {
+      ctx.strokeStyle = `rgba(255,255,255,${0.03 + edge.weight * 0.02})`;
+      ctx.lineWidth = Math.max(0.5, edge.weight * 0.7);
+    }
+    ctx.stroke();
+  }
+  
+  // Draw nodes
+  for (const node of nodes) {
+    if (!isNodeVisible(node)) continue;
+    
+    const color = COLORS[node.category] || COLORS.unknown;
+    const isSelected = selectedNode && selectedNode.id === node.id;
+    const isHovered = hoveredNode && hoveredNode.id === node.id;
+    const isConnectedToSelected = selectedNode && edges.some(e => 
+      (nodes[e.sourceIdx].id === selectedNode.id && nodes[e.targetIdx].id === node.id) ||
+      (nodes[e.targetIdx].id === selectedNode.id && nodes[e.sourceIdx].id === node.id)
+    );
+    const isConnectedToHovered = hoveredNode && edges.some(e =>
+      (nodes[e.sourceIdx].id === hoveredNode.id && nodes[e.targetIdx].id === node.id) ||
+      (nodes[e.targetIdx].id === hoveredNode.id && nodes[e.sourceIdx].id === node.id)
+    );
+    
+    let alpha = 1;
+    if ((selectedNode || hoveredNode) && !isSelected && !isHovered && !isConnectedToSelected && !isConnectedToHovered) {
+      alpha = 0.15;
+    }
+    
+    // Glow for living words
+    if (node.isLiving && alpha > 0.5) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.radius + 6, 0, Math.PI * 2);
+      ctx.fillStyle = color + '15';
+      ctx.fill();
+    }
+    
+    // Node circle
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+    
+    if (isSelected || isHovered) {
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = color + (alpha < 0.5 ? '30' : (node.isLiving ? 'cc' : '70'));
+      ctx.fill();
+      if (node.isLiving) {
+        ctx.strokeStyle = color + '50';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+    
+    // Label for larger/hovered/selected nodes
+    const showLabel = node.radius > 8 || isSelected || isHovered || isConnectedToSelected || (camera.zoom > 1.2);
+    if (showLabel && alpha > 0.3) {
+      ctx.font = `${isSelected || isHovered ? '600' : '400'} ${11 / Math.max(0.7, camera.zoom)}px Inter`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = `rgba(200,200,216,${alpha})`;
+      ctx.fillText(node.id, node.x, node.y + node.radius + 4);
+    }
+  }
+  
+  ctx.restore();
+}
+
+function loop() {
+  simulate();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// Mouse interaction
+function screenToWorld(sx, sy) {
+  return {
+    x: (sx - W / 2) / camera.zoom - camera.x,
+    y: (sy - H / 2) / camera.zoom - camera.y,
+  };
+}
+
+canvas.addEventListener('mousedown', e => {
+  dragging = true;
+  dragStart = { x: e.offsetX, y: e.offsetY };
+  camStart = { x: camera.x, y: camera.y };
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (dragging) {
+    camera.x = camStart.x + (e.offsetX - dragStart.x) / camera.zoom;
+    camera.y = camStart.y + (e.offsetY - dragStart.y) / camera.zoom;
+    return;
+  }
+  
+  // Hit test
+  const world = screenToWorld(e.offsetX, e.offsetY);
+  hoveredNode = null;
+  
+  for (const node of nodes) {
+    if (!isNodeVisible(node)) continue;
+    const dx = world.x - node.x;
+    const dy = world.y - node.y;
+    if (dx * dx + dy * dy < (node.radius + 4) ** 2) {
+      hoveredNode = node;
+      break;
+    }
+  }
+  
+  const tooltip = document.getElementById('tooltip');
+  if (hoveredNode) {
+    canvas.style.cursor = 'pointer';
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top = (e.clientY - 10) + 'px';
+    
+    const color = COLORS[hoveredNode.category] || COLORS.unknown;
+    tooltip.querySelector('.tt-name').textContent = hoveredNode.id;
+    tooltip.querySelector('.tt-name').style.color = color;
+    tooltip.querySelector('.tt-cat').textContent = hoveredNode.category;
+    tooltip.querySelector('.tt-cat').style.color = color;
+    tooltip.querySelector('.tt-stat').textContent = `${hoveredNode.count} compounds · ${hoveredNode.partners} partners${hoveredNode.isLiving ? ' · ✦ living' : ''}`;
+  } else {
+    canvas.style.cursor = dragging ? 'grabbing' : 'grab';
+    tooltip.style.display = 'none';
+  }
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (dragging) {
+    const dx = e.offsetX - dragStart.x;
+    const dy = e.offsetY - dragStart.y;
+    if (Math.abs(dx) < 3 && Math.abs(dy) < 3 && hoveredNode) {
+      selectNode(hoveredNode);
+    }
+  }
+  dragging = false;
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY > 0 ? 0.92 : 1.08;
+  camera.zoom = Math.max(0.2, Math.min(5, camera.zoom * factor));
+});
+
+// Essay toggle
+document.getElementById('essay-toggle').addEventListener('click', () => {
+  const overlay = document.getElementById('essay-overlay');
+  const btn = document.getElementById('essay-toggle');
+  if (overlay.classList.contains('open')) {
+    overlay.classList.remove('open');
+    btn.textContent = 'What an artificial language thinks goes together ↑';
+  } else {
+    overlay.classList.add('open');
+    btn.textContent = 'Close ↓';
+  }
+});
+
+// Init
+window.addEventListener('resize', resize);
+resize();
+loadData().then(() => loop());
+</script>
+</body>
+</html>
